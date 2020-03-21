@@ -149,13 +149,16 @@ class WC_Product_CSV_Importer_Controller {
 
 		$this->steps = apply_filters( 'woocommerce_product_csv_importer_steps', $default_steps );
 
-		// phpcs:disable WordPress.Security.NonceVerification.NoNonceVerification
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended
 		$this->step            = isset( $_REQUEST['step'] ) ? sanitize_key( $_REQUEST['step'] ) : current( array_keys( $this->steps ) );
 		$this->file            = isset( $_REQUEST['file'] ) ? wc_clean( wp_unslash( $_REQUEST['file'] ) ) : '';
 		$this->update_existing = isset( $_REQUEST['update_existing'] ) ? (bool) $_REQUEST['update_existing'] : false;
 		$this->delimiter       = ! empty( $_REQUEST['delimiter'] ) ? wc_clean( wp_unslash( $_REQUEST['delimiter'] ) ) : ',';
 		$this->map_preferences = isset( $_REQUEST['map_preferences'] ) ? (bool) $_REQUEST['map_preferences'] : false;
 		// phpcs:enable
+
+		// Import mappings for CSV data.
+		include_once dirname( __FILE__ ) . '/mappings/mappings.php';
 
 		if ( $this->map_preferences ) {
 			add_filter( 'woocommerce_csv_product_import_mapped_columns', array( $this, 'auto_map_user_preferences' ), 9999 );
@@ -260,7 +263,7 @@ class WC_Product_CSV_Importer_Controller {
 	 * Dispatch current step and show correct view.
 	 */
 	public function dispatch() {
-		// phpcs:ignore WordPress.Security.NonceVerification.NoNonceVerification
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		if ( ! empty( $_POST['save_step'] ) && ! empty( $this->steps[ $this->step ]['handler'] ) ) {
 			call_user_func( $this->steps[ $this->step ]['handler'], $this );
 		}
@@ -308,7 +311,7 @@ class WC_Product_CSV_Importer_Controller {
 	 * @return string|WP_Error
 	 */
 	public function handle_upload() {
-		// phpcs:disable WordPress.Security.NonceVerification.NoNonceVerification -- Nonce already verified in WC_Product_CSV_Importer_Controller::upload_form_handler()
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce already verified in WC_Product_CSV_Importer_Controller::upload_form_handler()
 		$file_url = isset( $_POST['file_url'] ) ? wc_clean( wp_unslash( $_POST['file_url'] ) ) : '';
 
 		if ( empty( $file_url ) ) {
@@ -488,8 +491,6 @@ class WC_Product_CSV_Importer_Controller {
 		$weight_unit    = get_option( 'woocommerce_weight_unit' );
 		$dimension_unit = get_option( 'woocommerce_dimension_unit' );
 
-		include dirname( __FILE__ ) . '/mappings/mappings.php';
-
 		/*
 		 * @hooked wc_importer_generic_mappings - 10
 		 * @hooked wc_importer_wordpress_mappings - 10
@@ -542,7 +543,8 @@ class WC_Product_CSV_Importer_Controller {
 					__( 'External URL', 'woocommerce' )   => 'product_url',
 					__( 'Button text', 'woocommerce' )    => 'button_text',
 					__( 'Position', 'woocommerce' )       => 'menu_order',
-				)
+				),
+				$raw_headers
 			)
 		);
 
@@ -567,7 +569,8 @@ class WC_Product_CSV_Importer_Controller {
 						__( 'Download %d URL', 'woocommerce' ) => 'downloads:url',
 						/* translators: %d: Meta number */
 						__( 'Meta: %s', 'woocommerce' ) => 'meta:',
-					)
+					),
+					$raw_headers
 				)
 			)
 		);
@@ -697,7 +700,8 @@ class WC_Product_CSV_Importer_Controller {
 				),
 			),
 			'category_ids'       => __( 'Categories', 'woocommerce' ),
-			'tag_ids'            => __( 'Tags', 'woocommerce' ),
+			'tag_ids'            => __( 'Tags (comma separated)', 'woocommerce' ),
+			'tag_ids_spaces'     => __( 'Tags (space separated)', 'woocommerce' ),
 			'shipping_class_id'  => __( 'Shipping class', 'woocommerce' ),
 			'images'             => __( 'Images', 'woocommerce' ),
 			'parent_id'          => __( 'Parent', 'woocommerce' ),
@@ -732,7 +736,7 @@ class WC_Product_CSV_Importer_Controller {
 			),
 			'reviews_allowed'    => __( 'Allow customer reviews?', 'woocommerce' ),
 			'purchase_note'      => __( 'Purchase note', 'woocommerce' ),
-			'meta:' . $meta      => __( 'Import as meta', 'woocommerce' ),
+			'meta:' . $meta      => __( 'Import as meta data', 'woocommerce' ),
 			'menu_order'         => __( 'Position', 'woocommerce' ),
 		);
 
